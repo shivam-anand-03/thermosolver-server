@@ -20,6 +20,16 @@ class Settings(BaseSettings):
     max_snapshots: int = 200  # transient output sampling target
     max_snapshot_values: int = 300_000
 
+    # three-phase workflow engine (/api/v2)
+    engine_max_per_axis: int = 401
+    engine_max_unknowns_direct: int = 2500  # Gauss elimination / LU work on a dense band copy
+    engine_max_unknowns_iterative: int = 10000  # Gauss–Seidel
+    engine_max_node_steps: int = 3_000_000
+    engine_max_snapshots: int = 60
+    engine_max_snapshot_values: int = 200_000
+    engine_matrix_preview: int = 30  # send the dense [A] and {B} when n <= this
+    engine_pattern_limit: int = 900  # send the sparsity pattern when n <= this
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

@@ -291,3 +291,25 @@ The API is deployed as a Render Web Service with this repository at the root:
 | Environment | `PYTHON_VERSION=3.12.3`, `THERMOSOLVE_CORS_ORIGINS=<UI origin>` |
 
 See `DEPLOYMENT.md` in the project workspace for the full walkthrough, including the Vercel side and troubleshooting.
+
+---
+
+## 14. Three-phase workflow engine (`/api/v2`)
+
+`app/engine/` implements the full **Preprocessor → Solver → Post-processor** process. The UI's default page drives it; the original 1-D step-by-step tool is still at `#classic`.
+
+| Phase | Item | What is implemented |
+|---|---|---|
+| I · Preprocessor | Problem statement | q''' = q₀ + βT; conduction / convection–diffusion / convection; steady / unsteady; 1-D / 2-D / 3-D |
+| | Geometry and grid | L, W, H and Nx, Ny, Nz (structured grid; vertex grid for FDM/FEM, cell-centred for FVM) |
+| | Physical phenomena | Uniform prescribed velocity (u, v, w); Péclet, cell Péclet, Fourier and Courant numbers |
+| | Material properties | Solid (conduction) and fluid (convective modes): k, ρ, c_p |
+| | Initial and boundary conditions | Temperature, heat flux, convective (h, T∞), wall (insulated), inflow (T_in), outflow (∂T/∂n = 0) |
+| II · Solver | Discretisation | FDM (ghost nodes), FVM (face fluxes; upwind / central / hybrid), FEM (Galerkin, d-linear elements) |
+| | Matrix inversion | Gauss–Seidel / SOR, Gauss elimination with partial pivoting, LU decomposition (PA = LU), all hand-written and band-aware |
+| | Convergence and initialisation | Tolerance, max iterations, residual or max-change criterion, ω (or optimal ω), initial guess |
+| | Time integration | θ-scheme: implicit, Crank–Nicolson, explicit (with stability check) |
+| III · Post-processor | Results | Node / x / T_numerical / T_exact table, fields, profiles, monitor-point history, [A] and LU factors for small systems |
+| | Validation | Exact solutions (1-D steady with any BCs and q₀ + βT, 1-D convection–diffusion and convection, 1-D transient series, 2-D Laplace series), error norms, residuals, grid-convergence study with observed order |
+
+Endpoints: `POST /api/v2/validate`, `POST /api/v2/simulate`, `POST /api/v2/refine` (body: `{preprocessor, solver}`; see `app/engine/schema.py`). Limits are set by the `THERMOSOLVE_ENGINE_*` settings in `app/config.py`.

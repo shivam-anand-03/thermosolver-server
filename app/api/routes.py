@@ -5,6 +5,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
+from ..engine.runner import refinement_study, run, validate_setup
+from ..engine.schema import SimulationSetup
 from ..models import ReportRequest, SolveEnvelope, SteadyRequest, TransientRequest
 from ..solver.examples import ExampleManager
 from ..solver.report import build_pdf_report
@@ -65,3 +67,23 @@ def report_pdf(req: ReportRequest) -> Response:
     pdf = build_pdf_report(result)
     return Response(pdf, media_type="application/pdf",
                     headers={"Content-Disposition": 'attachment; filename="thermosolve-report.pdf"'})
+
+
+# ------------------------------------------------- three-phase workflow (v2)
+@router.post("/v2/validate")
+def v2_validate(setup: SimulationSetup) -> dict:
+    """Phase I check: blocking errors and warnings for a workflow setup."""
+    errors, warnings = validate_setup(setup)
+    return {"valid": not errors, "errors": errors, "warnings": warnings}
+
+
+@router.post("/v2/simulate")
+def v2_simulate(setup: SimulationSetup) -> dict:
+    """Preprocessor → Solver → Post-processor for 1-D/2-D/3-D conduction and convection."""
+    return run(setup)
+
+
+@router.post("/v2/refine")
+def v2_refine(setup: SimulationSetup) -> dict:
+    """Mesh refinement study against the exact solution (observed order of accuracy)."""
+    return refinement_study(setup)
